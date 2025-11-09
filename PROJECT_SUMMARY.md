@@ -26,18 +26,6 @@ This repository now contains a complete boilerplate framework for training gener
   - Reparameterization trick
   - VAE loss computation
 
-#### Training Module (`src/training/`)
-- **trainer.py**: Complete training loop
-  - Epoch-based training
-  - Validation
-  - Checkpointing
-  - TensorBoard logging
-- **evaluator.py**: Evaluation metrics
-  - Graph statistics comparison
-  - Distribution comparison (KS test)
-  - Diversity metrics
-  - MMD computation
-
 #### Utils Module (`src/utils/`)
 - **config.py**: YAML configuration management
 - **visualization.py**: Plotting utilities
@@ -89,45 +77,6 @@ This repository now contains a complete boilerplate framework for training gener
 - **LICENSE**: MIT License
 - **data/README.md**: Data directory documentation
 
-### 🔧 DevOps
-- **.github/workflows/ci.yml**: CI/CD pipeline
-  - Multi-version Python testing
-  - Linting (flake8)
-  - Code formatting (black)
-  - Test suite execution
-
-## Key Features
-
-### ✨ Production-Ready
-- Clean, modular architecture
-- Comprehensive error handling
-- Type hints throughout
-- Well-documented code
-
-### 🔬 Extensible
-- Abstract base classes for easy extension
-- Plugin architecture for new models
-- Configurable preprocessing pipeline
-- Custom metrics support
-
-### 🧪 Well-Tested
-- 15 unit tests covering core functionality
-- Tests for data loading, preprocessing, and models
-- All tests passing
-- Easy to add more tests
-
-### 📊 Developer-Friendly
-- Jupyter notebooks for exploration
-- Clear examples and templates
-- Makefile for common tasks
-- Comprehensive documentation
-
-### 🚀 Scalable
-- GPU support
-- Batch processing
-- Distributed training ready
-- TensorBoard integration
-
 ## Technology Stack
 
 ### Core Dependencies
@@ -141,25 +90,7 @@ This repository now contains a complete boilerplate framework for training gener
 - **PyTorch Geometric**: Advanced GNN models
 - **DGL**: Alternative graph library
 
-### Development Tools
-- **pytest**: Testing framework
-- **black**: Code formatting
-- **flake8**: Linting
-- **isort**: Import sorting
-- **mypy**: Type checking
-
 ## Getting Started
-
-### Quick Test
-```bash
-# Install dependencies
-pip install numpy pandas networkx scipy pytest torch
-
-# Run tests
-pytest tests/ -v
-
-# All 15 tests should pass ✓
-```
 
 ### Basic Usage
 ```python
@@ -198,35 +129,6 @@ samples = model.generate(num_samples=100)
 4. **Evaluation**
    - Add domain-specific metrics in `src/training/evaluator.py`
    - Create custom visualization functions
-
-## Statistics
-
-- **Total Files**: 36
-- **Source Code**: ~1,226 lines
-- **Tests**: 15 (all passing)
-- **Documentation**: 4 comprehensive files
-- **Notebooks**: 3 interactive examples
-- **Configuration**: Complete YAML setup
-
-## Code Quality
-
-- ✅ All tests passing
-- ✅ Clean modular architecture
-- ✅ Type hints throughout
-- ✅ Comprehensive docstrings
-- ✅ Following PEP 8 guidelines
-- ✅ Ready for CI/CD
-
-## License
-
-MIT License - Free to use, modify, and distribute
-
-## Support
-
-- Issues: GitHub Issues
-- Documentation: README.md and QUICKSTART.md
-- Examples: Jupyter notebooks in `notebooks/`
-- Tests: Reference implementations in `tests/`
 
 ---
 

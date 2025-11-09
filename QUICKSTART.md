@@ -125,19 +125,6 @@ python scripts/evaluate.py \
 3. **Add Preprocessing**: Extend data preprocessing in `src/data/preprocessor.py`
 4. **Tune Hyperparameters**: Edit `configs/default_config.yaml`
 
-## Using Make Commands
-
-The project includes a Makefile for common tasks:
-
-```bash
-make help           # Show all available commands
-make install        # Install dependencies
-make test           # Run tests
-make format         # Format code
-make lint           # Check code style
-make notebook       # Start Jupyter notebook
-```
-
 ## Common Issues
 
 ### Import Errors
@@ -164,8 +151,6 @@ pip install dgl              # Alternative GNN library
 
 - Check the [main README](README.md) for detailed documentation
 - Review example notebooks in `notebooks/`
-- Look at test files in `tests/` for usage examples
-- Open an issue on GitHub for bugs or questions
 
 ## What's Next?
 

@@ -1,4 +1,4 @@
-# Synthetic Graph Data Generation
+# Synthetic Graph Data - Deep Graph Generation
 
 A comprehensive framework for training generative models to synthesize transactional graph data using deep learning techniques.
 
@@ -15,7 +15,6 @@ This repository provides a complete boilerplate for developing generative AI mod
 - **Evaluation Metrics**: Compare real and generated graphs
 - **Visualization Tools**: Visualize graphs and training metrics
 - **Configurable**: YAML-based configuration system
-- **Well-Tested**: Comprehensive test suite with pytest
 
 ## 📁 Project Structure
 
@@ -41,10 +40,9 @@ synthetic-data/
 │   ├── evaluate.py              # Evaluation script
 │   └── generate.py              # Generation script
 ├── notebooks/                    # Jupyter notebooks
-│   ├── 01_data_exploration.ipynb
-│   ├── 02_graph_preprocessing.ipynb
-│   └── 03_model_training.ipynb
-├── tests/                        # Test suite
+│   ├── data_exploration.ipynb
+│   ├── graph_preprocessing.ipynb
+│   └── model_training.ipynb
 ├── data/                         # Data directory
 │   ├── raw/                     # Raw data files
 │   ├── processed/               # Preprocessed data
@@ -114,14 +112,14 @@ user_2,user_3,250.75,2024-01-02
 
 Use the provided Jupyter notebooks to explore your data:
 ```bash
-jupyter notebook notebooks/01_data_exploration.ipynb
+jupyter notebook notebooks/data_exploration.ipynb
 ```
 
 ### 3. Preprocess into Graphs
 
 Convert your transactional data into graph structures:
 ```bash
-jupyter notebook notebooks/02_graph_preprocessing.ipynb
+jupyter notebook notebooks/graph_preprocessing.ipynb
 ```
 
 ### 4. Configure the Model
@@ -141,7 +139,7 @@ python scripts/train.py --config configs/default_config.yaml
 
 Or use the training notebook:
 ```bash
-jupyter notebook notebooks/03_model_training.ipynb
+jupyter notebook notebooks/model_training.ipynb
 ```
 
 ### 6. Generate Synthetic Graphs
@@ -212,81 +210,12 @@ def custom_metric(self, real_graphs, generated_graphs):
     return metric_value
 ```
 
-## 🧪 Testing
-
-Run the test suite:
-```bash
-pytest tests/ -v
-```
-
-Run with coverage:
-```bash
-pytest tests/ -v --cov=src --cov-report=html
-```
-
 ## 📈 Monitoring Training
 
 View training progress with TensorBoard:
 ```bash
 tensorboard --logdir runs/
 ```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes:
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📝 Development Guidelines
-
-- Follow PEP 8 style guide
-- Write docstrings for all functions and classes
-- Add tests for new functionality
-- Update documentation as needed
-
-Format code with:
-```bash
-black src tests
-isort src tests
-```
-
-Lint code with:
-```bash
-flake8 src tests
-```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- PyTorch team for the deep learning framework
-- NetworkX developers for graph algorithms
-- PyTorch Geometric and DGL teams for graph neural network libraries
-
-## 📚 References
-
-- [Graph Neural Networks](https://arxiv.org/abs/1901.00596)
-- [Variational Graph Auto-Encoders](https://arxiv.org/abs/1611.07308)
-- [NetGAN: Generating Graphs via Random Walks](https://arxiv.org/abs/1803.00816)
-
-## 📧 Contact
-
-For questions or issues, please open an issue on GitHub or contact the maintainers.
-
-## 🗺️ Roadmap
-
-- [ ] Add more model architectures (GAN, Diffusion models)
-- [ ] Support for temporal graphs
-- [ ] Distributed training support
-- [ ] Pre-trained model zoo
-- [ ] Web interface for visualization
-- [ ] Integration with graph databases
 
 ---
 
