@@ -1,0 +1,58 @@
+# Default configuration for graph generation model
+
+# Data settings
+data:
+  data_dir: "data/raw"
+  processed_dir: "data/processed"
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  batch_size: 32
+  num_workers: 4
+  
+# Model settings
+model:
+  type: "GraphVAE"  # Options: GraphVAE, GraphGAN, etc.
+  input_dim: 128
+  hidden_dim: 256
+  latent_dim: 64
+  num_nodes: 100
+  
+# Training settings
+training:
+  num_epochs: 100
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  scheduler: "StepLR"  # Options: StepLR, ReduceLROnPlateau, CosineAnnealingLR
+  scheduler_params:
+    step_size: 30
+    gamma: 0.1
+  clip_grad_norm: 1.0
+  log_interval: 10
+  save_interval: 10
+  
+# Loss settings
+loss:
+  type: "VAE"
+  beta: 1.0  # Weight for KL divergence in VAE
+  
+# Evaluation settings
+evaluation:
+  metrics:
+    - degree
+    - clustering
+    - density
+  num_samples: 100
+  
+# Experiment settings
+experiment:
+  name: "graph_synthesis_experiment"
+  seed: 42
+  checkpoint_dir: "checkpoints"
+  log_dir: "runs"
+  output_dir: "outputs"
+  
+# Hardware settings
+hardware:
+  device: "cuda"  # Options: cuda, cpu
+  gpu_id: 0
