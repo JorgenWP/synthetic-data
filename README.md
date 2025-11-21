@@ -83,7 +83,12 @@ id,date,client_id,card_id,amount,use_chip,merchant_id,merchant_city,merchant_sta
 Convert your transactional data into graph structures:
 ```bash
 cd bigg/bigg/data_process
-python preprocess_transactions.py
+python preprocess_transactions.py -save_dir ../../data/Transactions/transactions-BFS -node_order BFS
+```
+
+Optionally you could add a `start_date` and `cutoff_date` to limit the data range:
+```bash
+python preprocess_transactions.py -save_dir ../../data/Transactions/transactions-BFS -node_order BFS -start_date 2018-01-01 -cutoff_date 2019-01-01
 ```
 
 ### 4. Configure the Model
