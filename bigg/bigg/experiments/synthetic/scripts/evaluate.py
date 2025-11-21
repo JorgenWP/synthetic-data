@@ -3,6 +3,16 @@ import sys
 import argparse
 import pickle as cp
 import numpy as np
+import scipy
+
+# Restore np.float for legacy libraries
+if not hasattr(np, 'float'):
+    np.float = float
+
+# Restore scipy.errstate (which was an alias for numpy.errstate)
+if not hasattr(scipy, 'errstate'):
+    scipy.errstate = np.errstate
+
 import networkx as nx
 from datetime import datetime
 
