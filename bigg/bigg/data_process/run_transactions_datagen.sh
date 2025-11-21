@@ -3,8 +3,8 @@
 
 g_type=transactions
 ordering=BFS
-start_date=2018-01-01
-cutoff_date=2019-01-01
+start_date=2010-01-01
+cutoff_date=2019-11-01
 
 save_dir=../../data/Transactions/$g_type-$ordering
 

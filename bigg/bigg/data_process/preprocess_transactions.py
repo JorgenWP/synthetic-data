@@ -39,6 +39,8 @@ def load_transaction_graph_structure(csv_path, start_date, cutoff_date):
     
     # Map IDs to unique Integers
     # Prefix IDs to ensure Client 123 is distinct from Merchant 123
+    print(f"Mapping source and destination nodes...")
+
     df['src_node'] = 'c_' + df['client_id'].astype(str)
     df['dst_node'] = 'm_' + df['merchant_id'].astype(str)
     
@@ -49,6 +51,7 @@ def load_transaction_graph_structure(csv_path, start_date, cutoff_date):
     df['v'] = df['dst_node'].map(node_map)
     
     # Build Graph
+    print(f"Building graph structure...")
     G = nx.Graph()
     G.add_nodes_from(node_map.values())
     
