@@ -101,28 +101,30 @@ id,date,client_id,card_id,amount,use_chip,merchant_id,merchant_city,merchant_sta
 ### 2. Preprocess into Graphs
 
 Convert your transactional data into graph structures:
+
+1. Navigate to the data process directory:
 ```bash
 cd bigg/bigg/data_process
-python preprocess_transactions.py -save_dir ../../data/Transactions/transactions-BFS -node_order BFS
 ```
 
-Optionally you could add a `start_date` and `cutoff_date` to limit the data range:
+2. Configure the parameters in `run_transactions_datagen.sh` as needed.
+
+3. Run the preprocessing script:
 ```bash
-python preprocess_transactions.py -save_dir ../../data/Transactions/transactions-BFS -node_order BFS -start_date 2018-01-01 -cutoff_date 2019-01-01
+chmod +x run_transactions_datagen.sh
+./run_transactions_datagen.sh
 ```
 
-### 4. Configure the Model
+### 3. Train the Model
 
-Navigate to the model training/generation directory:
+1. Navigate to the model training/generation directory:
 ```bash
 cd ../experiments/synthetic/scripts
 ```
 
-Edit the file `run_transactions.sh` to customize training parameters.
+2. Edit the file `run_transactions.sh` to customize training parameters.
 
-### 5. Train the Model
-
-Train using the command-line script:
+3. Train using the command-line script:
 ```bash
 chmod +x run_transactions.sh
 ./run_transactions.sh
@@ -130,17 +132,15 @@ chmod +x run_transactions.sh
 
 The trained model will be placed in the `results/` directory.
 
-### 6. Generate Synthetic Graphs
+### 4. Generate Synthetic Graphs
 
 Generate new synthetic graphs using the trained model:
 ```bash
 ./run_transactions.sh \
-    --phase ... \
-    --example1 100 \
-    --example2 256
+    --phase test \
 ```
 
-### 7. Evaluate Results
+### 5. Evaluate Results
 
 Evaluate the quality of generated graphs:
 
