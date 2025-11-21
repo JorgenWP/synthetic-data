@@ -15,17 +15,22 @@ from bigg.common.configs import cmd_args  # Import the shared config parser
 # Define local arguments specific to this script
 cmd_opt = argparse.ArgumentParser(description='Preprocess transaction data for BiGG')
 cmd_opt.add_argument('-csv_path', default='../../data/Transactions/raw/transactions_data.csv', help='Path to input CSV')
-cmd_opt.add_argument('-nrows', default=None, type=int, help='Limit number of rows (e.g., 10000 for testing)')
+cmd_opt.add_argument('-date_cutoff', default='2019-11-01', help='Cutoff date for transactions (YYYY-MM-DD)')
 
 # Parse local arguments
 local_args, _ = cmd_opt.parse_known_args()
 
-def load_transaction_graph_structure(csv_path, limit=None):
+def load_transaction_graph_structure(csv_path, cutoff_date):
     """
     Reads the CSV and constructs a NetworkX graph (Structure Only).
     """
-    print(f"Reading {'all' if limit is None else str(limit)} rows from CSV...")
-    df = pd.read_csv(csv_path, nrows=limit)
+    print(f"Reading data from CSV...")
+    df = pd.read_csv(csv_path)
+
+    print(f"Filtering data up to {cutoff_date}...")
+    # Filter rows after a given date
+    df['date'] = pd.to_datetime(df['date']) # Ensure date column is datetime
+    df = df[df['date'] <= cutoff_date] # Keep rows on or before this date
     
     # Map IDs to unique Integers
     # Prefix IDs to ensure Client 123 is distinct from Merchant 123
@@ -54,7 +59,7 @@ if __name__ == '__main__':
     
     # Configuration from arguments
     # cmd_args.save_dir, cmd_args.node_order come from bigg.common.configs
-    # cmd_args.csv_path, cmd_args.nrows come from local parser above
+    # cmd_args.csv_path, cmd_args.date_cutoff come from local parser above
     
     if not os.path.exists(cmd_args.save_dir):
         os.makedirs(cmd_args.save_dir)
@@ -62,7 +67,7 @@ if __name__ == '__main__':
         
     # 1. Load Graph
     print(f"Loading CSV from {cmd_args.csv_path}...")
-    G = load_transaction_graph_structure(cmd_args.csv_path, limit=cmd_args.nrows)
+    G = load_transaction_graph_structure(cmd_args.csv_path, cutoff_date=cmd_args.date_cutoff)
     print(f"Graph built: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
     
     # 2. Process and Order
@@ -90,4 +95,4 @@ if __name__ == '__main__':
             for g in graphs:
                 cp.dump(g, f, cp.HIGHEST_PROTOCOL)
             
-    print(f"Preprocessing complete! Config: Order={cmd_args.node_order}, Rows={cmd_args.nrows}")
+    print(f"Preprocessing complete! Config: Order={cmd_args.node_order}, Date cutoff={cmd_args.date_cutoff}")
