@@ -16,9 +16,16 @@ synthetic-data/
 │   ├── bigg/                   # Source code
 |   │   ├── common/
 |   │   ├── data_process/
+|   │   │   ├── preprocess_transactions.py
 |   │   ├── experiments/
+|   │   │   └── synthetic/
+|   │   │       └── scripts/
+|   │   │           └── run_transactions.sh
 |   │   ├── extension/
 |   │   ├── model/
+|   │   │   └── tree_clib/
+|   │   │       ├── src/
+|   |   |       └── Makefile
 |   │   ├── torch_ops/
 |   │   └── unit_test/
 │   ├── data/                     # Data 
