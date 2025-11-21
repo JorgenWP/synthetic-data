@@ -12,25 +12,30 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from bigg.data_process.data_util import get_graph_data
 from bigg.common.configs import cmd_args  # Import the shared config parser
 
+DATASET_START_DATE = '2010-01-01'
+DATASET_END_DATE = '2019-11-01'
+
 # Define local arguments specific to this script
 cmd_opt = argparse.ArgumentParser(description='Preprocess transaction data for BiGG')
 cmd_opt.add_argument('-csv_path', default='../../data/Transactions/raw/transactions_data.csv', help='Path to input CSV')
-cmd_opt.add_argument('-date_cutoff', default='2019-11-01', help='Cutoff date for transactions (YYYY-MM-DD)')
+cmd_opt.add_argument('-start_date', default=DATASET_START_DATE, help='Start date for transactions (YYYY-MM-DD)')
+cmd_opt.add_argument('-cutoff_date', default=DATASET_END_DATE, help='Cutoff date for transactions (YYYY-MM-DD)')
+
 
 # Parse local arguments
 local_args, _ = cmd_opt.parse_known_args()
 
-def load_transaction_graph_structure(csv_path, cutoff_date):
+def load_transaction_graph_structure(csv_path, start_date, cutoff_date):
     """
     Reads the CSV and constructs a NetworkX graph (Structure Only).
     """
     print(f"Reading data from CSV...")
     df = pd.read_csv(csv_path)
 
-    print(f"Filtering data up to {cutoff_date}...")
+    print(f"Filtering data from {start_date} to {cutoff_date}...")
     # Filter rows after a given date
     df['date'] = pd.to_datetime(df['date']) # Ensure date column is datetime
-    df = df[df['date'] <= cutoff_date] # Keep rows on or before this date
+    df = df[(df['date'] >= start_date) & (df['date'] <= cutoff_date)] # Keep rows within the date range
     
     # Map IDs to unique Integers
     # Prefix IDs to ensure Client 123 is distinct from Merchant 123
@@ -59,7 +64,15 @@ if __name__ == '__main__':
     
     # Configuration from arguments
     # cmd_args.save_dir, cmd_args.node_order come from bigg.common.configs
-    # cmd_args.csv_path, cmd_args.date_cutoff come from local parser above
+    # cmd_args.csv_path, cmd_args.cutoff_date, cmd_args.start_date come from local parser above
+
+    # Date validation
+    if cmd_args.start_date > cmd_args.cutoff_date:
+        raise ValueError("Start date must be earlier than or equal to cutoff date.")
+    if cmd_args.start_date < DATASET_START_DATE:
+        raise ValueError(f"Start date must be on or after {DATASET_START_DATE}.")
+    if cmd_args.cutoff_date > DATASET_END_DATE:
+        raise ValueError(f"Cutoff date must be on or before {DATASET_END_DATE}.")
     
     if not os.path.exists(cmd_args.save_dir):
         os.makedirs(cmd_args.save_dir)
@@ -67,7 +80,7 @@ if __name__ == '__main__':
         
     # 1. Load Graph
     print(f"Loading CSV from {cmd_args.csv_path}...")
-    G = load_transaction_graph_structure(cmd_args.csv_path, cutoff_date=cmd_args.date_cutoff)
+    G = load_transaction_graph_structure(cmd_args.csv_path, start_date=cmd_args.start_date, cutoff_date=cmd_args.cutoff_date)
     print(f"Graph built: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
     
     # 2. Process and Order
@@ -95,4 +108,4 @@ if __name__ == '__main__':
             for g in graphs:
                 cp.dump(g, f, cp.HIGHEST_PROTOCOL)
             
-    print(f"Preprocessing complete! Config: Order={cmd_args.node_order}, Date cutoff={cmd_args.date_cutoff}")
+    print(f"Preprocessing complete! Config: Order={cmd_args.node_order}, Start Date={cmd_args.start_date}, Cutoff Date={cmd_args.cutoff_date}")
