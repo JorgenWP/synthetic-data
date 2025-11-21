@@ -65,6 +65,19 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+6. Add the GRAN repo:
+
+Navigate to the root of the repository and clone the [GRAN repository](https://github.com/lrjconan/GRAN):
+```bash
+git clone https://github.com/lrjconan/GRAN.git
+```
+
+7. Add the BiGG and GRAN projects to the `PYTHONPATH` environment variable:
+```bash
+export PYTHONPATH=$PYTHONPATH:$(pwd)/bigg
+export PYTHONPATH=$PYTHONPATH:$(pwd)/GRAN
+```
+
 ## 📊 Quick Start
 
 ### 1. Prepare Your Data
