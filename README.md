@@ -137,14 +137,27 @@ The trained model will be placed in the `results/` directory.
 Generate new synthetic graphs using the trained model:
 ```bash
 ./run_transactions.sh \
-    --phase test \
+    -phase test \
+    -epoch_load 25 \
+    -num_test_gen 1 \
+    -display True \
 ```
 
 ### 5. Evaluate Results
 
-Evaluate the quality of generated graphs:
+Evaluate the quality of generated graphs using the command-line script:
+```bash
+chmod +x run_evaluate.sh
+./run_evaluate.sh
+```
 
-...
+### 6. Visualize Generated Graphs
+
+Visualize the generated graphs using the python scripts:
+```bash
+python visualize_graphs.py
+```
+
 
 ---
 
