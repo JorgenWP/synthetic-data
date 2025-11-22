@@ -13,24 +13,72 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from bigg.data_process.data_util import get_graph_data
 from bigg.common.configs import cmd_args
 
-
+# Define Arguments
 cmd_opt = argparse.ArgumentParser(description='Preprocess transaction data for BiGG')
 cmd_opt.add_argument('-input_path', default='../../data/Transactions/raw/transactions_data.csv', 
                      help='Path to input file (.csv or .gpickle)')
-cmd_opt.add_argument('-limit_size', type=int, default=None, 
-                     help='Maximum number of nodes to keep')
+cmd_opt.add_argument('-save_dir', default='../../data/Transactions/processed_multigraph', 
+                     help='Directory to save output')
+cmd_opt.add_argument('-node_order', default='DFS', choices=['DFS', 'BFS'], help='Traversal ordering for BiGG')
+
+# Sampling Arguments
+cmd_opt.add_argument('-num_graphs', type=int, default=50, 
+                     help='Number of subgraphs to extract')
+cmd_opt.add_argument('-min_nodes', type=int, default=500, 
+                     help='Minimum nodes per subgraph')
+cmd_opt.add_argument('-max_nodes', type=int, default=1000, 
+                     help='Maximum nodes per subgraph')
 cmd_opt.add_argument('-sampling_method', type=str, default='forest_fire', choices=['bfs', 'forest_fire'],
-                     help='Method to downsample graph: "bfs" (dense core) or "forest_fire" (preserves sparsity)')
+                     help='Method to downsample graph')
 
 local_args, _ = cmd_opt.parse_known_args()
 
+def load_graph_structure(file_path):
+    """
+    Loads the full raw graph into memory with ORIGINAL labels.
+    Does NOT convert to integers yet to save RAM.
+    """
+    print(f"Loading full graph from {file_path}...")
+    
+    if file_path.endswith('.csv'):
+        df = pd.read_csv(file_path)
+        # Ensure unique IDs for mapping
+        df['src'] = 'c_' + df['client_id'].astype(str)
+        df['dst'] = 'm_' + df['merchant_id'].astype(str)
+        
+        G = nx.Graph()
+        # NetworkX handles string labels perfectly fine
+        G.add_edges_from(zip(df['src'], df['dst']))
+        
+    else: # Pickle / Gpickle
+        try:
+            with open(file_path, 'rb') as f:
+                G_raw = cp.load(f)
+        except:
+            G_raw = nx.read_gpickle(file_path)
+        
+        G = nx.Graph()
+        G.add_edges_from(G_raw.edges())
+        G.remove_edges_from(nx.selfloop_edges(G))
+
+    print(f"  - Full Graph Loaded: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
+    return G
+
 def bfs_sampling(G, target_size):
     """
-    Snowball Sampling (BFS).
-    Result: A very connected, dense subgraph. Good for connectivity, bad for sparsity.
+    Randomized BFS Sampling on the original graph.
     """
-    print(f"Sampling (BFS) to {target_size} nodes...")
-    start_node = max(dict(G.degree()).items(), key=lambda x: x[1])[0]
+    # Pick random node. Since labels are strings, we convert keys to list.
+    nodes = list(G.nodes())
+    
+    # Optimization: Calculating degrees for 1.6M nodes can be slow.
+    # Uniform random choice is much faster and sufficient for random patches.
+    # If you really need degree-weighted:
+    degrees = np.array([d for n, d in G.degree()])
+    probs = degrees / degrees.sum()
+    start_node = np.random.choice(nodes, p=probs)
+    
+    # start_node = random.choice(nodes)
     
     sampled_nodes = set([start_node])
     queue = [start_node]
@@ -38,7 +86,7 @@ def bfs_sampling(G, target_size):
     while len(sampled_nodes) < target_size and queue:
         current = queue.pop(0)
         neighbors = list(G.neighbors(current))
-        random.shuffle(neighbors) # Shuffle to avoid order bias
+        random.shuffle(neighbors)
         
         for n in neighbors:
             if n not in sampled_nodes:
@@ -51,47 +99,31 @@ def bfs_sampling(G, target_size):
 
 def forest_fire_sampling(G, target_size, p=0.7):
     """
-    Forest Fire Sampling.
-    Result: A sparse, connected subgraph that preserves power-law properties.
-    p: Forward burning probability (0.7 is a standard default for social/fin networks).
+    Forest Fire Sampling on the original graph.
     """
-    print(f"Sampling (Forest Fire) to {target_size} nodes with p={p}...")
-    
     nodes = list(G.nodes())
     sampled_nodes = set()
     
-    # Helper to pick a random seed not yet sampled
     def get_random_seed():
         candidates = [n for n in nodes if n not in sampled_nodes]
-        return random.choice(candidates) if candidates else None
+        if not candidates: candidates = nodes
+        return random.choice(candidates)
 
-    # Start the fire
-    while len(sampled_nodes) < target_size:
+    # Safety counter to prevent infinite loops on disconnected graphs
+    attempts = 0
+    max_attempts = target_size * 2
+
+    while len(sampled_nodes) < target_size and attempts < max_attempts:
         seed = get_random_seed()
-        if seed is None: break # No more nodes
-        
         queue = [seed]
         sampled_nodes.add(seed)
+        attempts += 1
         
         while queue and len(sampled_nodes) < target_size:
             current = queue.pop(0)
-            
-            # Get neighbors not yet visited in this burn
-            # (Forest Fire normally is directed, but works on undirected as 'neighbors')
             neighbors = [n for n in G.neighbors(current) if n not in sampled_nodes]
             
-            # "Geometric" selection: Keep burning with probability p
-            # Effectively: sample X neighbors where X ~ Geometric(p)
-            # Simplified: For each neighbor, burn with prob p/(1-p) or just p depending on formulation.
-            # Here we use the Leskovec formulation: generate x ~ Geom(p), select x neighbors.
-            
-            if not neighbors:
-                continue
-
-            # Calculate how many neighbors to burn
-            # Mean = p / (1-p). If p=0.7, mean is 2.33. 
             try:
-                # Numpy geometric is number of trials to get success, so we adjust
                 n_to_burn = np.random.geometric(1.0 - p) - 1
             except:
                 n_to_burn = 1
@@ -107,66 +139,65 @@ def forest_fire_sampling(G, target_size, p=0.7):
                         if len(sampled_nodes) >= target_size:
                             break
                             
-    # Extract subgraph and remove isolates (Forest Fire naturally creates components)
     subgraph = G.subgraph(list(sampled_nodes)).copy()
     
-    # Optional: Take largest connected component if BiGG strictly requires connectivity
-    # (BiGG can handle components, but learning is more stable on the largest one)
-    if nx.number_connected_components(subgraph) > 1:
-        print("  - Note: Sampling created multiple components. Keeping largest component to ensure stability.")
+    if not nx.is_connected(subgraph):
         largest_cc = max(nx.connected_components(subgraph), key=len)
         subgraph = subgraph.subgraph(largest_cc).copy()
 
     return subgraph
 
-def load_gpickle_structure(pickle_path, limit_size=None, method='forest_fire'):
-    print(f"Loading graph from {pickle_path}...")
-    try:
-        with open(pickle_path, 'rb') as f:
-            G_raw = cp.load(f)
-    except:
-        G_raw = nx.read_gpickle(pickle_path)
-
-    # Structure only (Undirected)
-    G_struct = nx.Graph()
-    G_struct.add_nodes_from(G_raw.nodes())
-    G_struct.add_edges_from(G_raw.edges())
-    G_struct.remove_edges_from(nx.selfloop_edges(G_struct))
-
-    if limit_size and G_struct.number_of_nodes() > limit_size:
-        if method == 'bfs':
-            G_struct = bfs_sampling(G_struct, limit_size)
-        else:
-            G_struct = forest_fire_sampling(G_struct, limit_size)
-    
-    # Relabel to 0...N-1
-    G_struct = nx.convert_node_labels_to_integers(G_struct, ordering='sorted')
-    return G_struct
-
-
 if __name__ == '__main__':
     cmd_args.__dict__.update(local_args.__dict__)
-    
+
     if not os.path.exists(cmd_args.save_dir):
         os.makedirs(cmd_args.save_dir)
+
+    # Load the Graph 
+    full_graph = load_graph_structure(cmd_args.input_path)
     
-    # Load the graph data and apply sampling if needed
-    G = load_gpickle_structure(cmd_args.input_path, 
-                                   limit_size=cmd_args.limit_size,
-                                   method=cmd_args.sampling_method)
+    # Extract Subgraphs
+    all_subgraphs = []
+    print(f"\nGenerating {cmd_args.num_graphs} subgraphs ({cmd_args.min_nodes}-{cmd_args.max_nodes} nodes)...")
     
+    for i in tqdm(range(cmd_args.num_graphs)):
+        target_size = random.randint(cmd_args.min_nodes, cmd_args.max_nodes)
+        
+        if cmd_args.sampling_method == 'bfs':
+            subG = bfs_sampling(full_graph, target_size)
+        else:
+            subG = forest_fire_sampling(full_graph, target_size)
+        
+        # Convert node labels to integers
+        subG = nx.convert_node_labels_to_integers(subG)
+        
+        # Process for BiGG (Canonical Ordering)
+        processed_parts = get_graph_data(subG, node_order=cmd_args.node_order)
+        if processed_parts:
+            all_subgraphs.append(processed_parts[0])
+
+    print(f"Successfully created {len(all_subgraphs)} subgraphs.")
+
+    # Split Data
+    random.shuffle(all_subgraphs)
+    n_train = int(len(all_subgraphs) * 0.8)
+    n_val = int(len(all_subgraphs) * 0.1)
     
-    print(f"Final Graph: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
+    splits = {
+        'train': all_subgraphs[:n_train],
+        'val': all_subgraphs[n_train:n_train+n_val],
+        'test': all_subgraphs[n_train+n_val:]
+    }
     
-    print(f"Ordering graph using {cmd_args.node_order}...")
-    processed_graphs = get_graph_data(G, node_order=cmd_args.node_order)
-    
-    splits = {'train': processed_graphs, 'val': processed_graphs, 'test': processed_graphs}
-    
+    if not splits['val'] and splits['train']: splits['val'] = [splits['train'][0]]
+    if not splits['test'] and splits['train']: splits['test'] = [splits['train'][0]]
+
+    # Save
     for phase, graphs in splits.items():
         save_path = os.path.join(cmd_args.save_dir, f'{phase}-graphs.pkl')
+        print(f"Saving {len(graphs)} graphs to {save_path}...")
         with open(save_path, 'wb') as f:
             for g in graphs:
                 cp.dump(g, f, cp.HIGHEST_PROTOCOL)
             
-    print(f"Preprocessing complete!")
+    print(f"\nPreprocessing complete! Data saved to {cmd_args.save_dir}")
