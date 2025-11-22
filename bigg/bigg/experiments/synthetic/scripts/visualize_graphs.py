@@ -7,21 +7,32 @@ import matplotlib.pyplot as plt
 import os
 
 ##### Configuration #####
-model_folder = "DFS-blksize--1-b-80"
-graph_file_name = "epoch-25.ckpt.graphs-0"
+data_dir = "results" # 'data' or 'results'
+file_path = f"lobster/DFS-blksize--1-b-80/epoch-25.ckpt.graphs-0"
+# file_path = "Transactions/transactions-BFS/train-graphs.pkl"
 #########################
 
 # File paths
-graph_file_path = f"../../../../results/lobster/{model_folder}/{graph_file_name}"
+graph_file_path = f"../../../../{data_dir}/{file_path}"
 output_dir = "../../../../results/generated_images"
 
 # Load graphs
 print(f"Loading graphs from {graph_file_path}...")
 
+graphs = []
 with open(graph_file_path, 'rb') as f:
-    graphs = pickle.load(f)
+    if data_dir == "results":
+        graphs = pickle.load(f)
+    elif data_dir == "data":
+        try:
+            while True:
+                graphs.append(pickle.load(f))
+        except EOFError:
+            pass  # Finished reading all graphs
+    else:
+        raise ValueError(f"Unknown data_dir: {data_dir}")
 
-print(f"Successfully loaded {len(graphs)} graphs.")
+print(f"Successfully loaded {len(graphs)} graph(s).")
  
 # Create a folder to save the images
 if not os.path.exists(output_dir):
@@ -30,7 +41,9 @@ if not os.path.exists(output_dir):
 print("\nDrawing graphs...")
  
 # Visualize the first 5 graphs
-for i, G in enumerate(graphs[:5]):
+num_to_draw = min(5, len(graphs))
+
+for i, G in enumerate(graphs[:num_to_draw]):
     print(f'Drawing graph {i}: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges')
    
     plt.figure(figsize=(8, 8))
