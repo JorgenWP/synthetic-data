@@ -206,8 +206,8 @@ python visualize_graphs.py
 This project builds upon existing open-source work in the graph generation community. We include and adapt components from the following:
 
 - **BiGG** ([Google Research](https://github.com/google-research/google-research/tree/master/bigg))  
-  Apache 2.0 License  
-  Portions of this codebase (e.g., `FenwickTree`, `RecurTreeGen`, input preprocessing) are adapted from BiGG and clearly marked in-file.
+  Apache 2.0 License
+  The BiGG project has been used and slightly modified for this work.
 
 <!-- - **GraphRNN** ([Jiaxuan You et al.](https://github.com/JiaxuanYou/graph-generation))  
   MIT License  
@@ -215,4 +215,4 @@ This project builds upon existing open-source work in the graph generation commu
 
 - **GRAN** ([Lirui Jia et al.](https://github.com/lrjconan/GRAN))  
   MIT License  
-  Additional evaluation utilities are adapted.
+  Additional evaluation utilities.
