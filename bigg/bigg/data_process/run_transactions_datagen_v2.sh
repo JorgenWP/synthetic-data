@@ -19,7 +19,7 @@ python preprocess_transactions_v2.py \
   -save_dir $save_dir \
   -node_order $ordering \
   -sampling_method $sampling_method \
-  -num_graphs 50 \
+  -num_graphs 13 \
   -min_nodes 500 \
   -max_nodes 1000 \
   

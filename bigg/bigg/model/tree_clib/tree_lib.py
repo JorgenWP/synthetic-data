@@ -42,12 +42,20 @@ class CtypeGraph(object):
 class _tree_lib(object):
 
     def __init__(self):
-        pass
+        import os
+        import ctypes
+        # Load the Linux library from the CURRENT folder
+        lib_path = os.path.join(os.path.dirname(__file__), 'libtree.so')
+        self.lib = ctypes.CDLL(lib_path)
+        
+        self.num_graphs = 0
+        self.graph_stats = []
 
     def setup(self, config):
+        '''
         dir_path = os.path.dirname(os.path.realpath(__file__))
         self.lib = ctypes.CDLL('%s/build/dll/libtree.so' % dir_path)
-
+        '''
         self.lib.Init.restype = ctypes.c_int
         self.lib.PrepareTrain.restype = ctypes.c_int
         self.lib.AddGraph.restype = ctypes.c_int
@@ -347,6 +355,9 @@ TreeLib = _tree_lib()
 
 def setup_treelib(config):
     global TreeLib
+    '''
     dll_path = '%s/build/dll/libtree.so' % os.path.dirname(os.path.realpath(__file__))
     if os.path.exists(dll_path):
         TreeLib.setup(config)
+    '''
+    TreeLib.setup(config)
