@@ -5,110 +5,199 @@ import networkx as nx
 import pandas as pd
 import numpy as np
 import argparse
+import random
 from tqdm import tqdm
 
 # Import existing utilities
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from bigg.data_process.data_util import get_graph_data
-from bigg.common.configs import cmd_args  # Import the shared config parser
+from bigg.common.configs import cmd_args
 
-DATASET_START_DATE = '2010-01-01'
-DATASET_END_DATE = '2019-11-01'
-
-# Define local arguments specific to this script
+# Define Arguments
 cmd_opt = argparse.ArgumentParser(description='Preprocess transaction data for BiGG')
-cmd_opt.add_argument('-csv_path', default='../../data/Transactions/raw/transactions_data.csv', help='Path to input CSV')
-cmd_opt.add_argument('-start_date', default=DATASET_START_DATE, help='Start date for transactions (YYYY-MM-DD)')
-cmd_opt.add_argument('-cutoff_date', default=DATASET_END_DATE, help='Cutoff date for transactions (YYYY-MM-DD)')
+cmd_opt.add_argument('-input_path', default='../../data/Transactions/raw/transactions_data.csv', 
+                     help='Path to input file (.csv or .gpickle)')
+cmd_opt.add_argument('-save_dir', default='../../data/Transactions/processed_multigraph', 
+                     help='Directory to save output')
+cmd_opt.add_argument('-node_order', default='DFS', choices=['DFS', 'BFS'], help='Traversal ordering for BiGG')
 
+# Sampling Arguments
+cmd_opt.add_argument('-num_graphs', type=int, default=50, 
+                     help='Number of subgraphs to extract')
+cmd_opt.add_argument('-min_nodes', type=int, default=500, 
+                     help='Minimum nodes per subgraph')
+cmd_opt.add_argument('-max_nodes', type=int, default=1000, 
+                     help='Maximum nodes per subgraph')
+cmd_opt.add_argument('-sampling_method', type=str, default='forest_fire', choices=['bfs', 'forest_fire'],
+                     help='Method to downsample graph')
 
-# Parse local arguments
 local_args, _ = cmd_opt.parse_known_args()
 
-def load_transaction_graph_structure(csv_path, start_date, cutoff_date):
+def load_graph_structure(file_path):
     """
-    Reads the CSV and constructs a NetworkX graph (Structure Only).
+    Loads the full raw graph into memory with ORIGINAL labels.
+    Does NOT convert to integers yet to save RAM.
     """
-    print(f"Reading data from CSV...")
-    df = pd.read_csv(csv_path)
+    print(f"Loading full graph from {file_path}...")
+    
+    if file_path.endswith('.csv'):
+        df = pd.read_csv(file_path)
+        # Ensure unique IDs for mapping
+        df['src'] = 'c_' + df['client_id'].astype(str)
+        df['dst'] = 'm_' + df['merchant_id'].astype(str)
+        
+        G = nx.Graph()
+        # NetworkX handles string labels perfectly fine
+        G.add_edges_from(zip(df['src'], df['dst']))
+        
+    else: # Pickle / Gpickle
+        try:
+            with open(file_path, 'rb') as f:
+                G_raw = cp.load(f)
+        except:
+            G_raw = nx.read_gpickle(file_path)
+        
+        G = nx.Graph()
+        G.add_edges_from(G_raw.edges())
+        G.remove_edges_from(nx.selfloop_edges(G))
 
-    print(f"Filtering data from {start_date} to {cutoff_date}...")
-    # Filter rows after a given date
-    df['date'] = pd.to_datetime(df['date']) # Ensure date column is datetime
-    df = df[(df['date'] >= start_date) & (df['date'] <= cutoff_date)] # Keep rows within the date range
-    
-    # Map IDs to unique Integers
-    # Prefix IDs to ensure Client 123 is distinct from Merchant 123
-    print(f"Mapping source and destination nodes...")
-
-    df['src_node'] = 'c_' + df['client_id'].astype(str)
-    df['dst_node'] = 'm_' + df['merchant_id'].astype(str)
-    
-    unique_nodes = pd.concat([df['src_node'], df['dst_node']]).unique()
-    node_map = {node_id: i for i, node_id in enumerate(unique_nodes)}
-    
-    df['u'] = df['src_node'].map(node_map)
-    df['v'] = df['dst_node'].map(node_map)
-    
-    # Build Graph
-    print(f"Building graph structure...")
-    G = nx.Graph()
-    G.add_nodes_from(node_map.values())
-    
-    # Add edges (using list of tuples for speed)
-    edges = list(zip(df['u'], df['v']))
-    G.add_edges_from(edges)
-                   
+    print(f"  - Full Graph Loaded: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
     return G
 
-if __name__ == '__main__':
-    # Merge local arguments into the global cmd_args (overwriting defaults if provided)
-    cmd_args.__dict__.update(local_args.__dict__)
+def bfs_sampling(G, target_size):
+    """
+    Randomized BFS Sampling on the original graph.
+    """
+    # Pick random node. Since labels are strings, we convert keys to list.
+    nodes = list(G.nodes())
     
-    # Configuration from arguments
-    # cmd_args.save_dir, cmd_args.node_order come from bigg.common.configs
-    # cmd_args.csv_path, cmd_args.cutoff_date, cmd_args.start_date come from local parser above
+    # Optimization: Calculating degrees for 1.6M nodes can be slow.
+    # Uniform random choice is much faster and sufficient for random patches.
+    # If you really need degree-weighted:
+    degrees = np.array([d for n, d in G.degree()])
+    probs = degrees / degrees.sum()
+    start_node = np.random.choice(nodes, p=probs)
+    
+    # start_node = random.choice(nodes)
+    
+    sampled_nodes = set([start_node])
+    queue = [start_node]
+    
+    while len(sampled_nodes) < target_size and queue:
+        current = queue.pop(0)
+        neighbors = list(G.neighbors(current))
+        random.shuffle(neighbors)
+        
+        for n in neighbors:
+            if n not in sampled_nodes:
+                sampled_nodes.add(n)
+                queue.append(n)
+                if len(sampled_nodes) >= target_size:
+                    break
+                    
+    return G.subgraph(list(sampled_nodes)).copy()
 
-    # Date validation
-    if cmd_args.start_date > cmd_args.cutoff_date:
-        raise ValueError("Start date must be earlier than or equal to cutoff date.")
-    if cmd_args.start_date < DATASET_START_DATE:
-        raise ValueError(f"Start date must be on or after {DATASET_START_DATE}.")
-    if cmd_args.cutoff_date > DATASET_END_DATE:
-        raise ValueError(f"Cutoff date must be on or before {DATASET_END_DATE}.")
+def forest_fire_sampling(G, target_size, p=0.7):
+    """
+    Forest Fire Sampling on the original graph.
+    """
+    nodes = list(G.nodes())
+    sampled_nodes = set()
     
+    def get_random_seed():
+        candidates = [n for n in nodes if n not in sampled_nodes]
+        if not candidates: candidates = nodes
+        return random.choice(candidates)
+
+    # Safety counter to prevent infinite loops on disconnected graphs
+    attempts = 0
+    max_attempts = target_size * 2
+
+    while len(sampled_nodes) < target_size and attempts < max_attempts:
+        seed = get_random_seed()
+        queue = [seed]
+        sampled_nodes.add(seed)
+        attempts += 1
+        
+        while queue and len(sampled_nodes) < target_size:
+            current = queue.pop(0)
+            neighbors = [n for n in G.neighbors(current) if n not in sampled_nodes]
+            
+            try:
+                n_to_burn = np.random.geometric(1.0 - p) - 1
+            except:
+                n_to_burn = 1
+            
+            if n_to_burn > 0:
+                random.shuffle(neighbors)
+                targets = neighbors[:n_to_burn]
+                
+                for t in targets:
+                    if t not in sampled_nodes:
+                        sampled_nodes.add(t)
+                        queue.append(t)
+                        if len(sampled_nodes) >= target_size:
+                            break
+                            
+    subgraph = G.subgraph(list(sampled_nodes)).copy()
+    
+    if not nx.is_connected(subgraph):
+        largest_cc = max(nx.connected_components(subgraph), key=len)
+        subgraph = subgraph.subgraph(largest_cc).copy()
+
+    return subgraph
+
+if __name__ == '__main__':
+    cmd_args.__dict__.update(local_args.__dict__)
+
     if not os.path.exists(cmd_args.save_dir):
         os.makedirs(cmd_args.save_dir)
-        print(f"Created directory: {cmd_args.save_dir}")
-        
-    # 1. Load Graph
-    print(f"Loading CSV from {cmd_args.csv_path}...")
-    G = load_transaction_graph_structure(cmd_args.csv_path, start_date=cmd_args.start_date, cutoff_date=cmd_args.cutoff_date)
-    print(f"Graph built: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
-    
-    # 2. Process and Order
-    print(f"Ordering graph using {cmd_args.node_order}...")
-    processed_graphs = get_graph_data(G, node_order=cmd_args.node_order)
-    
-    print(f"Generated {len(processed_graphs)} component(s).")
 
-    # 3. Assign to Splits (Single Train Set Strategy)
-    # As discussed, we replicate the graph across train/val/test to satisfy pipeline requirements.
-    print("Assigning entire dataset to Train, Val, and Test splits...")
+    # Load the Graph 
+    full_graph = load_graph_structure(cmd_args.input_path)
+    
+    # Extract Subgraphs
+    all_subgraphs = []
+    print(f"\nGenerating {cmd_args.num_graphs} subgraphs ({cmd_args.min_nodes}-{cmd_args.max_nodes} nodes)...")
+    
+    for i in tqdm(range(cmd_args.num_graphs)):
+        target_size = random.randint(cmd_args.min_nodes, cmd_args.max_nodes)
+        
+        if cmd_args.sampling_method == 'bfs':
+            subG = bfs_sampling(full_graph, target_size)
+        else:
+            subG = forest_fire_sampling(full_graph, target_size)
+        
+        # Convert node labels to integers
+        subG = nx.convert_node_labels_to_integers(subG)
+        
+        # Process for BiGG (Canonical Ordering)
+        processed_parts = get_graph_data(subG, node_order=cmd_args.node_order)
+        if processed_parts:
+            all_subgraphs.append(processed_parts[0])
+
+    print(f"Successfully created {len(all_subgraphs)} subgraphs.")
+
+    # Split Data
+    random.shuffle(all_subgraphs)
+    n_train = int(len(all_subgraphs) * 0.8)
+    n_val = int(len(all_subgraphs) * 0.1)
     
     splits = {
-        'train': processed_graphs,
-        'val': processed_graphs,
-        'test': processed_graphs
+        'train': all_subgraphs[:n_train],
+        'val': all_subgraphs[n_train:n_train+n_val],
+        'test': all_subgraphs[n_train+n_val:]
     }
     
-    # 4. Save to Disk
-    print(f"Saving files to {cmd_args.save_dir}...")
+    if not splits['val'] and splits['train']: splits['val'] = [splits['train'][0]]
+    if not splits['test'] and splits['train']: splits['test'] = [splits['train'][0]]
+
+    # Save
     for phase, graphs in splits.items():
         save_path = os.path.join(cmd_args.save_dir, f'{phase}-graphs.pkl')
-        print(f"  - Saving {len(graphs)} graph(s) to {os.path.basename(save_path)}")
+        print(f"Saving {len(graphs)} graphs to {save_path}...")
         with open(save_path, 'wb') as f:
             for g in graphs:
                 cp.dump(g, f, cp.HIGHEST_PROTOCOL)
             
-    print(f"Preprocessing complete! Config: Order={cmd_args.node_order}, Start Date={cmd_args.start_date}, Cutoff Date={cmd_args.cutoff_date}")
+    print(f"\nPreprocessing complete! Data saved to {cmd_args.save_dir}")
