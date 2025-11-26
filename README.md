@@ -35,7 +35,7 @@ synthetic-data/
 └── README.md       # This file
 ```
 
-## 🆕 Extensions to Existing Frameworks
+## 🆕 Extensions to Existing Framework
 
 For preprocessing of the transactional data the following files have been created:
 
@@ -206,7 +206,7 @@ python visualize_graphs.py
 This project builds upon existing open-source work in the graph generation community. We include and adapt components from the following:
 
 - **BiGG** ([Google Research](https://github.com/google-research/google-research/tree/master/bigg))  
-  Apache 2.0 License
+  Apache 2.0 License  
   The BiGG project has been used and slightly modified for this work.
 
 <!-- - **GraphRNN** ([Jiaxuan You et al.](https://github.com/JiaxuanYou/graph-generation))  
