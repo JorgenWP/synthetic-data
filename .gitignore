@@ -1,5 +1,5 @@
 # Project spesific
-data/
+.data/
 *venv*
 
 # Byte-compiled / optimized / DLL files
