@@ -47,6 +47,7 @@ def evaluate(args, train_set, val_set, test_set):
 
     for i, model_name in enumerate(args.model_list):
         if args.task_name == "aggregation":
+            print(f"Performing {args.task_name} task using the {model_name} model...")
             acc_mic[i], acc_mac[i] = aggregation(args, model_name, train_loader, val_loader, test_loader)
     return acc_mic, acc_mac
 
@@ -69,10 +70,12 @@ def main():
     for t in range(trials):
 
         # Prepare duplicate-encoded computation graphs
+        print("Preparing datasets...")
         train_set = Dataset(args, "train", adj, feat, label, ids)
         val_set = Dataset(args, "val", adj, feat, label, ids)
         test_set = Dataset(args, "test", adj, feat, label, ids)
         # Check GNN performance on the original dataset
+        print("\nEvaluating GNN performance on the original dataset...")
         start_time = perf_counter()
         acc_mic, acc_mac = evaluate(args, train_set, val_set, test_set)
         acc_mic_list[0, : , t] = acc_mic
@@ -80,11 +83,13 @@ def main():
         print('Original evaluation time: {:.3f}, acc: {}'.format(perf_counter() - start_time, acc_mic))
 
         ## Train GPT on the original graph
+        print("\nTraining GPT on the original graph and generating synthetic datasets...")
         start_time = perf_counter()
         gen_train_set, gen_val_set, gen_test_set = gpt.run(args, adj, feat, label, ids)
         print('GPT training/generation total time: {:.3f}'.format(perf_counter() - start_time))
 
         ## Check GNN performance on the generated dataset
+        print("\nEvaluating GNN performance on the synthetic dataset...")
         start_time = perf_counter()
         acc_mic, acc_mac = evaluate(args, gen_train_set, gen_val_set, gen_test_set)
         acc_mic_list[1, : , t] = acc_mic
@@ -94,6 +99,7 @@ def main():
     test_acc_avg = np.average(acc_mic_list, axis=2)
     test_acc_std = np.std(acc_mic_list, axis=2)
 
+    print("\n--- Final results ---")
     print('Task: ' + args.task_name + ', Dataset: ' + args.dataset)
     for model_name in args.model_list:
         print(model_name, end=', ')
