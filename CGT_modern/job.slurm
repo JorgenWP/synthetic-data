@@ -27,7 +27,7 @@ module purge
 #module load fosscuda/2018b
 #module load Python/3.11           # Load Python module if needed
 #module load CUDA/12.1             # Load CUDA if needed
-module load Anaconda/2020.07
+module load Anaconda3/2023.09-0
 
 # Set up the conda environment
 conda env create -f cgt_modern_env.yml
