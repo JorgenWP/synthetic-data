@@ -68,6 +68,7 @@ def main():
     acc_mac_list = np.zeros((2, len(args.model_list), trials))
 
     for t in range(trials):
+        print(f"\n--- Trial {t+1} ---")
 
         # Prepare duplicate-encoded computation graphs
         print("Preparing datasets...")
