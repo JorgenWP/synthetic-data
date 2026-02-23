@@ -24,10 +24,7 @@ echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
 
 module purge
 
-#module load fosscuda/2018b
-#module load Python/3.11           # Load Python module if needed
-#module load CUDA/12.1             # Load CUDA if needed
-module load Anaconda3/2023.09-0
+module load Anaconda3/2024.02-1
 
 # Set up the conda environment
 conda env create -f cgt_modern_env.yml
